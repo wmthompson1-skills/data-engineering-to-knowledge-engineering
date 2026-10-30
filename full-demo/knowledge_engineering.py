@@ -1,9 +1,13 @@
+import os
 from maplib import Model
 from maplib import explore
 from utils import print_count
 
 import data_engineering as data
 import time
+
+# Run from this script's folder so relative paths (tpl/, ttl/, queries/, data/) resolve
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Serialise data frames to RDF using OTTR templates for customer data

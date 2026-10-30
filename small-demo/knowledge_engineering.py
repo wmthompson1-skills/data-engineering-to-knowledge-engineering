@@ -1,6 +1,10 @@
+import os
 from maplib import Model
 
 import data_engineering as de
+
+# Run from this script's folder so relative paths (data/, queries/, rdf/) resolve
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 m = Model()
 m.map_default(de.planets(), "planet_iri")
