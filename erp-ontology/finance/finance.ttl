@@ -1,0 +1,114 @@
+@prefix :                  <http://data.treehouse.example/erp/finance/> .
+@prefix owl:               <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:               <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:              <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:               <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:               <http://purl.org/dc/terms/> .
+
+# FIBO modules (namespaces verified against edmcouncil/fibo on GitHub)
+@prefix fibo-fnd-pas-pas:  <https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/ProductsAndServices/> .
+@prefix fibo-fnd-pas-psch: <https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/> .
+@prefix fibo-fnd-acc-cur:  <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> .
+@prefix fibo-fbc-pas-caa:  <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/> .
+
+<http://data.treehouse.example/erp/finance/> rdf:type owl:Ontology ;
+    dct:title "ERP finance module" ;
+    rdfs:comment "Payables, receivables and general ledger concepts for an ERP. Reuses FIBO where FIBO has a matching class; defines invoices locally because FIBO has no invoice class." .
+
+####################################### REUSED FROM FIBO
+# Customers, suppliers, buyers and sellers: fibo-fnd-pas-pas:Customer, :Supplier, :Buyer, :Seller
+# Payments:                                 fibo-fnd-pas-psch:Payment, :PaymentSchedule
+# Money and currency:                       fibo-fnd-acc-cur:Currency, :MonetaryAmount
+# Ledgers and accounts:                     fibo-fbc-pas-caa:GeneralLedger, :LedgerAccount, :AccountingTransaction
+
+####################################### RECEIVABLES AND PAYABLES
+
+:SalesInvoice a owl:Class ;
+    rdfs:label "Sales invoice"@en ;
+    rdfs:comment "A bill issued to a customer for goods or services. An obligation of the customer to pay."@en ;
+    rdfs:subClassOf fibo-fnd-pas-psch:PaymentObligation .
+
+:PurchaseInvoice a owl:Class ;
+    rdfs:label "Purchase invoice"@en ;
+    rdfs:comment "A bill received from a supplier for goods or services. An obligation of the company to pay."@en ;
+    rdfs:subClassOf fibo-fnd-pas-psch:PaymentObligation .
+
+:billedTo a owl:ObjectProperty ;
+    rdfs:label "billed to"@en ;
+    rdfs:domain :SalesInvoice ;
+    rdfs:range fibo-fnd-pas-pas:Customer .
+
+:billedBy a owl:ObjectProperty ;
+    rdfs:label "billed by"@en ;
+    rdfs:domain :PurchaseInvoice ;
+    rdfs:range fibo-fnd-pas-pas:Supplier .
+
+:invoiceAmount a owl:DatatypeProperty ;
+    rdfs:label "invoice amount"@en ;
+    rdfs:comment "Invoice total. Currency is carried by the amount's currency property in the source data." ;
+    rdfs:range xsd:decimal .
+
+:settles a owl:ObjectProperty ;
+    rdfs:label "settles"@en ;
+    rdfs:comment "Links a payment to the invoice it pays."@en ;
+    rdfs:domain fibo-fnd-pas-psch:Payment ;
+    rdfs:range fibo-fnd-pas-psch:PaymentObligation .
+
+####################################### GENERAL LEDGER
+
+:JournalEntry a owl:Class ;
+    rdfs:label "Journal entry"@en ;
+    rdfs:comment "A posted set of debits and credits to ledger accounts."@en ;
+    rdfs:subClassOf fibo-fbc-pas-caa:AccountingTransaction .
+
+:postedTo a owl:ObjectProperty ;
+    rdfs:label "posted to"@en ;
+    rdfs:domain :JournalEntry ;
+    rdfs:range fibo-fbc-pas-caa:LedgerAccount .
+
+:hasSourceInvoice a owl:ObjectProperty ;
+    rdfs:label "has source invoice"@en ;
+    rdfs:comment "Ties a journal entry to the invoice that produced it, so ledger totals trace back to receivables and payables."@en ;
+    rdfs:domain :JournalEntry ;
+    rdfs:range [ a owl:Class ;
+        owl:unionOf ( :SalesInvoice :PurchaseInvoice ) ] .
+
+####################################### PERIOD TOTALS
+
+# High-level totals per accounting period. The ERP holds the invoice detail,
+# ageing and ledger lines; this module carries one amount per period.
+:PeriodTotal a owl:Class ;
+    rdfs:label "Period total"@en ;
+    rdfs:comment "Total amount for one payables, receivables or ledger line over one accounting period."@en .
+
+:PayablesTotal a owl:Class ;
+    rdfs:label "Payables total"@en ;
+    rdfs:comment "Accounts payable balance owed to suppliers at the end of the period."@en ;
+    rdfs:subClassOf :PeriodTotal .
+
+:ReceivablesTotal a owl:Class ;
+    rdfs:label "Receivables total"@en ;
+    rdfs:comment "Accounts receivable balance owed by customers at the end of the period."@en ;
+    rdfs:subClassOf :PeriodTotal .
+
+:GeneralLedgerTotal a owl:Class ;
+    rdfs:label "General ledger total"@en ;
+    rdfs:comment "Total of journal entries posted to the general ledger in the period."@en ;
+    rdfs:subClassOf :PeriodTotal .
+
+:period a owl:DatatypeProperty ;
+    rdfs:label "accounting period"@en ;
+    rdfs:comment "e.g. 2026-10."@en ;
+    rdfs:domain :PeriodTotal ;
+    rdfs:range xsd:string .
+
+:totalAmount a owl:DatatypeProperty ;
+    rdfs:label "total amount"@en ;
+    rdfs:domain :PeriodTotal ;
+    rdfs:range xsd:decimal .
+
+:totalCurrencyCode a owl:DatatypeProperty ;
+    rdfs:label "total currency code"@en ;
+    rdfs:comment "ISO 4217 code, e.g. USD."@en ;
+    rdfs:domain :PeriodTotal ;
+    rdfs:range xsd:string .

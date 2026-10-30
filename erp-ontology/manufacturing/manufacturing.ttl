@@ -1,0 +1,197 @@
+@prefix :                  <http://data.treehouse.example/erp/manufacturing/> .
+@prefix fin:               <http://data.treehouse.example/erp/finance/> .
+@prefix owl:               <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:               <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:              <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:               <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:               <http://purl.org/dc/terms/> .
+
+<http://data.treehouse.example/erp/manufacturing/> rdf:type owl:Ontology ;
+    dct:title "ERP manufacturing module" ;
+    rdfs:comment "Material, inventory state and production events modelled on ISA-95 (IEC 62264) Parts 2 and 4. Emits events that the finance module turns into GL journal entries. Costing is actual FIFO, kept in the ERP; this module carries period totals only. Class and property names follow ISA-95 terms; this is a local namespace, not the official ISA-95 model." .
+
+####################################### MATERIAL MODEL (ISA-95 Part 2)
+
+:MaterialClass a owl:Class ;
+    rdfs:label "Material class"@en ;
+    rdfs:comment "Generic kind of material, e.g. Steel Coil, Resin, Assembled Widget."@en .
+
+:MaterialDefinition a owl:Class ;
+    rdfs:label "Material definition"@en ;
+    rdfs:comment "Specific part number or SKU, e.g. SKU-9982."@en ;
+    rdfs:subClassOf :MaterialClass .
+
+:MaterialLot a owl:Class ;
+    rdfs:label "Material lot"@en ;
+    rdfs:comment "A uniquely identifiable, trackable quantity of one material definition, e.g. LOT-2026-1029."@en .
+
+:MaterialSubLot a owl:Class ;
+    rdfs:label "Material sub-lot"@en ;
+    rdfs:comment "A portion of a lot tracked separately, e.g. Pallet-3 of a lot."@en .
+
+:lotOf a owl:ObjectProperty ;
+    rdfs:domain :MaterialLot ;
+    rdfs:range :MaterialDefinition .
+
+:subLotOf a owl:ObjectProperty ;
+    rdfs:domain :MaterialSubLot ;
+    rdfs:range :MaterialLot .
+
+:quantity a owl:DatatypeProperty ;
+    rdfs:domain :MaterialLot ;
+    rdfs:range xsd:decimal .
+
+:unitOfMeasure a owl:DatatypeProperty ;
+    rdfs:domain :MaterialLot ;
+    rdfs:range xsd:string .
+
+####################################### INVENTORY STATE
+
+:InventoryState a owl:Class ;
+    rdfs:label "Inventory state"@en ;
+    rdfs:comment "Financial inventory category a lot is in. Carried on the lot, not hardcoded into the material definition."@en .
+
+:RawMaterial a :InventoryState ;
+    rdfs:label "Raw material"@en .
+
+:WorkInProcess a :InventoryState ;
+    rdfs:label "Work in process"@en ;
+    rdfs:comment "Lot is in a production step at an active equipment element or work cell."@en .
+
+:FinishedGood a :InventoryState ;
+    rdfs:label "Finished good"@en .
+
+:hasInventoryState a owl:ObjectProperty ;
+    rdfs:domain :MaterialLot ;
+    rdfs:range :InventoryState .
+
+:lotStatus a owl:DatatypeProperty ;
+    rdfs:label "lot status"@en ;
+    rdfs:comment "Operational status such as Available, Inspected, In-Progress, Released or Staged."@en ;
+    rdfs:domain :MaterialLot ;
+    rdfs:range xsd:string .
+
+####################################### PRODUCTION STRUCTURE (ISA-95 Part 2 and 3)
+
+:WorkCell a owl:Class ;
+    rdfs:label "Work cell"@en ;
+    rdfs:comment "Level 3 location where material is transformed. Equipment and personnel are assigned here."@en .
+
+:ProductionStep a owl:Class ;
+    rdfs:label "Production step"@en ;
+    rdfs:comment "One operation in a routing, performed at a work cell."@en .
+
+:performedAt a owl:ObjectProperty ;
+    rdfs:domain :ProductionStep ;
+    rdfs:range :WorkCell .
+
+####################################### PERFORMANCE EVENTS (ISA-95 Part 4)
+
+:MaterialPerformance a owl:Class ;
+    rdfs:label "Material performance"@en ;
+    rdfs:comment "Level 3 event recording material movement. Subclasses are consumption and production."@en .
+
+:MaterialConsumed a owl:Class ;
+    rdfs:label "Material consumed"@en ;
+    rdfs:comment "Raw material issued to a work cell and consumed by a production step."@en ;
+    rdfs:subClassOf :MaterialPerformance .
+
+:MaterialProduced a owl:Class ;
+    rdfs:label "Material produced"@en ;
+    rdfs:comment "Output lot created by a production step, or receipt of a finished lot to stock."@en ;
+    rdfs:subClassOf :MaterialPerformance .
+
+:PersonnelPerformance a owl:Class ;
+    rdfs:label "Personnel performance"@en ;
+    rdfs:comment "Labour hours booked against a production step."@en .
+
+:EquipmentPerformance a owl:Class ;
+    rdfs:label "Equipment performance"@en ;
+    rdfs:comment "Machine run time booked against a production step."@en .
+
+:consumedLot a owl:ObjectProperty ;
+    rdfs:domain :MaterialConsumed ;
+    rdfs:range :MaterialLot .
+
+:producedLot a owl:ObjectProperty ;
+    rdfs:domain :MaterialProduced ;
+    rdfs:range :MaterialLot .
+
+:forStep a owl:ObjectProperty ;
+    rdfs:domain :MaterialPerformance ;
+    rdfs:range :ProductionStep .
+
+:hours a owl:DatatypeProperty ;
+    rdfs:domain :PersonnelPerformance ;
+    rdfs:range xsd:decimal .
+
+:runTime a owl:DatatypeProperty ;
+    rdfs:domain :EquipmentPerformance ;
+    rdfs:range xsd:decimal .
+
+####################################### POSTED AMOUNTS
+
+# The value of an event as posted to the ledger, in the ERP's FIFO cost.
+# Layer detail stays in the ERP. No rdfs:domain: RDFS treats several domains
+# as "all of", so the event classes are not declared here.
+:postedAmount a owl:DatatypeProperty ;
+    rdfs:label "posted amount"@en ;
+    rdfs:range xsd:decimal .
+
+:currencyCode a owl:DatatypeProperty ;
+    rdfs:label "currency code"@en ;
+    rdfs:comment "ISO 4217 code, e.g. USD."@en ;
+    rdfs:range xsd:string .
+
+####################################### PERIOD TOTALS
+
+# High-level balances per period. Inventory, WIP, finished goods and COGS are
+# totals only; the ERP holds the layers and the lot detail.
+:PeriodTotal a owl:Class ;
+    rdfs:label "Period total"@en ;
+    rdfs:comment "Total amount for one inventory state or cost line over one accounting period."@en .
+
+:InventoryTotal a owl:Class ;
+    rdfs:label "Inventory total"@en ;
+    rdfs:subClassOf :PeriodTotal .
+
+:CostOfGoodsSold a owl:Class ;
+    rdfs:label "Cost of goods sold"@en ;
+    rdfs:subClassOf :PeriodTotal .
+
+:period a owl:DatatypeProperty ;
+    rdfs:label "accounting period"@en ;
+    rdfs:comment "e.g. 2026-10."@en ;
+    rdfs:domain :PeriodTotal ;
+    rdfs:range xsd:string .
+
+:totalAmount a owl:DatatypeProperty ;
+    rdfs:domain :PeriodTotal ;
+    rdfs:range xsd:decimal .
+
+:totalOf a owl:ObjectProperty ;
+    rdfs:label "total of"@en ;
+    rdfs:comment "The inventory state an inventory total describes."@en ;
+    rdfs:domain :InventoryTotal ;
+    rdfs:range :InventoryState .
+
+####################################### LEDGER BRIDGE
+
+# Each performance event may trigger one journal entry in the finance module.
+# The mapping from event to debit and credit accounts is kept out of this module,
+# so a rules layer can change it without a change to the operational model.
+:triggersJournalEntry a owl:ObjectProperty ;
+    rdfs:label "triggers journal entry"@en ;
+    rdfs:comment "Links an ISA-95 performance event to the finance journal entry it produces."@en ;
+    rdfs:domain :MaterialPerformance ;
+    rdfs:range fin:JournalEntry .
+
+:triggersJournalEntryFromLabour a owl:ObjectProperty ;
+    rdfs:label "triggers journal entry (labour)"@en ;
+    rdfs:domain :PersonnelPerformance ;
+    rdfs:range fin:JournalEntry .
+
+:triggersJournalEntryFromMachine a owl:ObjectProperty ;
+    rdfs:label "triggers journal entry (machine)"@en ;
+    rdfs:domain :EquipmentPerformance ;
+    rdfs:range fin:JournalEntry .
