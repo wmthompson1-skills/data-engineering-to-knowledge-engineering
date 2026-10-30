@@ -44,3 +44,7 @@ Or open the notebook at `full-demo/notebook/from_de_to_ke.ipynb` for a guided wa
 * [maplib tutorial documentation](https://datatreehouse.github.io/documentation/#/page/maplib%20docs)
 * [maplib API documentation](https://datatreehouse.github.io/maplib/maplib.html)
 * [OTTR masterclass](https://github.com/veleda/ottr-masterclass)
+
+### Credits
+
+Original code and article series by Veronika Heimsbakk. Original repository: [veleda/data-engineering-to-knowledge-engineering](https://github.com/veleda/data-engineering-to-knowledge-engineering).

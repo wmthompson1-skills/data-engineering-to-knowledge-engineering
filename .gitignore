@@ -13,3 +13,6 @@ full-demo/ttl/out.ttl
 
 # Internal tooling
 full-demo/fts/
+
+# Stray paths written by the vscode-sqltools extension
+C:*
